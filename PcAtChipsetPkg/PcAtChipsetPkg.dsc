@@ -43,8 +43,11 @@
   HobLib|MdePkg/Library/DxeHobLib/DxeHobLib.inf
 
 [Components]
+  PcAtChipsetPkg/8254TimerDxe/8254Timer.inf
   PcAtChipsetPkg/HpetTimerDxe/HpetTimerDxe.inf
+  PcAtChipsetPkg/8259InterruptControllerDxe/8259.inf
   PcAtChipsetPkg/Bus/Pci/IdeControllerDxe/IdeControllerDxe.inf
+  PcAtChipsetPkg/IsaAcpiDxe/IsaAcpi.inf
   PcAtChipsetPkg/Library/SerialIoLib/SerialIoLib.inf
   PcAtChipsetPkg/Library/ResetSystemLib/ResetSystemLib.inf
   PcAtChipsetPkg/Library/BaseIoApicLib/BaseIoApicLib.inf
