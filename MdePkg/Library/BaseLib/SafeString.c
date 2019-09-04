@@ -7,10 +7,12 @@
 **/
 
 #include "BaseLibInternals.h"
+// this is 1.000.000
+#define RSIZE_MAX  100000000ull
+//(PcdGet32 (PcdMaximumUnicodeStringLength))
 
-#define RSIZE_MAX  (PcdGet32 (PcdMaximumUnicodeStringLength))
-
-#define ASCII_RSIZE_MAX  (PcdGet32 (PcdMaximumAsciiStringLength))
+#define ASCII_RSIZE_MAX  100000000ull
+//(PcdGet32 (PcdMaximumAsciiStringLength))
 
 #define SAFE_STRING_CONSTRAINT_CHECK(Expression, Status)  \
   do { \
@@ -124,7 +126,7 @@ StrnLenS (
   //
   // If String is a null pointer or MaxSize is 0, then the StrnLenS function returns zero.
   //
-  if ((String == NULL) || (MaxSize == 0)) {
+  if (String == NULL) {
     return 0;
   }
 
@@ -251,18 +253,20 @@ StrCpyS (
   // 4. DestMax shall be greater than StrnLenS(Source, DestMax).
   //
   SourceLen = StrnLenS (Source, DestMax);
-  SAFE_STRING_CONSTRAINT_CHECK ((DestMax > SourceLen), RETURN_BUFFER_TOO_SMALL);
+//  SAFE_STRING_CONSTRAINT_CHECK ((DestMax > SourceLen), RETURN_BUFFER_TOO_SMALL);
+//Slice: nonsense because of StrnLenS result always <= DestMax
 
   //
   // 5. Copying shall not take place between objects that overlap.
   //
-  SAFE_STRING_CONSTRAINT_CHECK (InternalSafeStringNoStrOverlap (Destination, DestMax, (CHAR16 *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
+//  SAFE_STRING_CONSTRAINT_CHECK (InternalSafeStringNoStrOverlap (Destination, DestMax, (CHAR16 *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
+  //Slice: relax
 
   //
   // The StrCpyS function copies the string pointed to by Source (including the terminating
   // null character) into the array pointed to by Destination.
   //
-  while (*Source != 0) {
+  while ((*Source != 0) && (--DestMax > 0)) {
     *(Destination++) = *(Source++);
   }
   *Destination = 0;
@@ -323,10 +327,10 @@ StrnCpyS (
   //
   // 2. Neither DestMax nor Length shall be greater than RSIZE_MAX
   //
-  if (RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
-    SAFE_STRING_CONSTRAINT_CHECK ((Length <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
+//  if (RSIZE_MAX != 0) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//    SAFE_STRING_CONSTRAINT_CHECK ((Length <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//  }
 
   //
   // 3. DestMax shall not equal zero.
@@ -336,10 +340,10 @@ StrnCpyS (
   //
   // 4. If Length is not less than DestMax, then DestMax shall be greater than StrnLenS(Source, DestMax).
   //
-  SourceLen = StrnLenS (Source, MIN (DestMax, Length));
-  if (Length >= DestMax) {
-    SAFE_STRING_CONSTRAINT_CHECK ((DestMax > SourceLen), RETURN_BUFFER_TOO_SMALL);
-  }
+  SourceLen = StrnLenS (Source, MIN (DestMax, Length)); //Slice: SourceLen <= DestMax
+//  if (Length >= DestMax) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((DestMax > SourceLen), RETURN_BUFFER_TOO_SMALL);
+//  }
 
   //
   // 5. Copying shall not take place between objects that overlap.
@@ -347,7 +351,7 @@ StrnCpyS (
   if (SourceLen > Length) {
     SourceLen = Length;
   }
-  SAFE_STRING_CONSTRAINT_CHECK (InternalSafeStringNoStrOverlap (Destination, DestMax, (CHAR16 *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
+//  SAFE_STRING_CONSTRAINT_CHECK (InternalSafeStringNoStrOverlap (Destination, DestMax, (CHAR16 *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
 
   //
   // The StrnCpyS function copies not more than Length successive characters (characters that
@@ -355,7 +359,7 @@ StrnCpyS (
   // pointed to by Destination. If no null character was copied from Source, then Destination[Length] is set to a null
   // character.
   //
-  while ((SourceLen > 0) && (*Source != 0)) {
+  while ((SourceLen > 0) && (*Source != 0) && (--DestMax > 0)) {
     *(Destination++) = *(Source++);
     SourceLen--;
   }
@@ -412,7 +416,7 @@ StrCatS (
   //
   // Let CopyLen denote the value DestMax - StrnLenS(Destination, DestMax) upon entry to StrCatS.
   //
-  DestLen = StrnLenS (Destination, DestMax);
+  DestLen = StrnLenS (Destination, DestMax);  //Slice: DestLen <= DestMax
   CopyLen = DestMax - DestLen;
 
   //
@@ -424,9 +428,12 @@ StrCatS (
   //
   // 2. DestMax shall not be greater than RSIZE_MAX.
   //
-  if (RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
+//  if (RSIZE_MAX != 0) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//    if (DestMax > RSIZE_MAX) {
+//      DestMax = RSIZE_MAX;
+//    }
+//  }
 
   //
   // 3. DestMax shall not equal zero.
@@ -441,13 +448,13 @@ StrCatS (
   //
   // 5. CopyLen shall be greater than StrnLenS(Source, CopyLen).
   //
-  SourceLen = StrnLenS (Source, CopyLen);
-  SAFE_STRING_CONSTRAINT_CHECK ((CopyLen > SourceLen), RETURN_BUFFER_TOO_SMALL);
+  SourceLen = StrnLenS (Source, CopyLen);  //Slice:  SourceLen <= CopyLen
+//  SAFE_STRING_CONSTRAINT_CHECK ((CopyLen > SourceLen), RETURN_BUFFER_TOO_SMALL);
 
   //
   // 6. Copying shall not take place between objects that overlap.
   //
-  SAFE_STRING_CONSTRAINT_CHECK (InternalSafeStringNoStrOverlap (Destination, DestMax, (CHAR16 *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
+//  SAFE_STRING_CONSTRAINT_CHECK (InternalSafeStringNoStrOverlap (Destination, DestMax, (CHAR16 *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
 
   //
   // The StrCatS function appends a copy of the string pointed to by Source (including the
@@ -455,7 +462,7 @@ StrCatS (
   // from Source overwrites the null character at the end of Destination.
   //
   Destination = Destination + DestLen;
-  while (*Source != 0) {
+  while ((*Source != 0) && (--CopyLen > 0)) {
     *(Destination++) = *(Source++);
   }
   *Destination = 0;
@@ -527,10 +534,10 @@ StrnCatS (
   //
   // 2. Neither DestMax nor Length shall be greater than RSIZE_MAX.
   //
-  if (RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
-    SAFE_STRING_CONSTRAINT_CHECK ((Length <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
+//  if (RSIZE_MAX != 0) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//    SAFE_STRING_CONSTRAINT_CHECK ((Length <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//  }
 
   //
   // 3. DestMax shall not equal zero.
@@ -546,9 +553,9 @@ StrnCatS (
   // 5. If Length is not less than CopyLen, then CopyLen shall be greater than StrnLenS(Source, CopyLen).
   //
   SourceLen = StrnLenS (Source, MIN (CopyLen, Length));
-  if (Length >= CopyLen) {
-    SAFE_STRING_CONSTRAINT_CHECK ((CopyLen > SourceLen), RETURN_BUFFER_TOO_SMALL);
-  }
+//  if (Length >= CopyLen) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((CopyLen > SourceLen), RETURN_BUFFER_TOO_SMALL);
+//  }
 
   //
   // 6. Copying shall not take place between objects that overlap.
@@ -556,7 +563,7 @@ StrnCatS (
   if (SourceLen > Length) {
     SourceLen = Length;
   }
-  SAFE_STRING_CONSTRAINT_CHECK (InternalSafeStringNoStrOverlap (Destination, DestMax, (CHAR16 *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
+//  SAFE_STRING_CONSTRAINT_CHECK (InternalSafeStringNoStrOverlap (Destination, DestMax, (CHAR16 *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
 
   //
   // The StrnCatS function appends not more than Length successive characters (characters
@@ -566,7 +573,7 @@ StrnCatS (
   // a null character.
   //
   Destination = Destination + DestLen;
-  while ((SourceLen > 0) && (*Source != 0)) {
+  while ((SourceLen > 0) && (*Source != 0) && (--CopyLen > 0)) {
     *(Destination++) = *(Source++);
     SourceLen--;
   }
@@ -642,9 +649,9 @@ StrDecimalToUintnS (
   //
   // 2. The length of String shall not be greater than RSIZE_MAX.
   //
-  if (RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((StrnLenS (String, RSIZE_MAX + 1) <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
+//  if (RSIZE_MAX != 0) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((StrnLenS (String, RSIZE_MAX + 1) <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//  }
 
   if (EndPointer != NULL) {
     *EndPointer = (CHAR16 *) String;
@@ -672,13 +679,14 @@ StrDecimalToUintnS (
     // defined by UINTN, then MAX_UINTN is stored in *Data and
     // RETURN_UNSUPPORTED is returned.
     //
-    if (*Data > ((MAX_UINTN - (*String - L'0')) / 10)) {
-      *Data = MAX_UINTN;
-      if (EndPointer != NULL) {
-        *EndPointer = (CHAR16 *) String;
-      }
-      return RETURN_UNSUPPORTED;
-    }
+//    if (*Data > ((MAX_UINTN - (*String - L'0')) / 10)) {
+//      *Data = MAX_UINTN;
+//      if (EndPointer != NULL) {
+//        *EndPointer = (CHAR16 *) String;
+//      }
+//      return RETURN_UNSUPPORTED;
+//      ASSERT (*Data <= ((((UINTN) ~0) - (*String - L'0')) / 10));
+//    }
 
     *Data = *Data * 10 + (*String - L'0');
     String++;
@@ -757,9 +765,9 @@ StrDecimalToUint64S (
   //
   // 2. The length of String shall not be greater than RSIZE_MAX.
   //
-  if (RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((StrnLenS (String, RSIZE_MAX + 1) <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
+//  if (RSIZE_MAX != 0) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((StrnLenS (String, RSIZE_MAX + 1) <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//  }
 
   if (EndPointer != NULL) {
     *EndPointer = (CHAR16 *) String;
@@ -787,13 +795,14 @@ StrDecimalToUint64S (
     // defined by UINT64, then MAX_UINT64 is stored in *Data and
     // RETURN_UNSUPPORTED is returned.
     //
-    if (*Data > DivU64x32 (MAX_UINT64 - (*String - L'0'), 10)) {
-      *Data = MAX_UINT64;
-      if (EndPointer != NULL) {
-        *EndPointer = (CHAR16 *) String;
-      }
-      return RETURN_UNSUPPORTED;
-    }
+//    if (*Data > DivU64x32 (MAX_UINT64 - (*String - L'0'), 10)) {
+//      *Data = MAX_UINT64;
+//      if (EndPointer != NULL) {
+//        *EndPointer = (CHAR16 *) String;
+//      }
+//      return RETURN_UNSUPPORTED;
+//    }
+//    ASSERT (*Data <= DivU64x32 (((UINT64) ~0) - (*String - L'0') , 10));
 
     *Data = MultU64x32 (*Data, 10) + (*String - L'0');
     String++;
@@ -877,9 +886,9 @@ StrHexToUintnS (
   //
   // 2. The length of String shall not be greater than RSIZE_MAX.
   //
-  if (RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((StrnLenS (String, RSIZE_MAX + 1) <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
+//  if (RSIZE_MAX != 0) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((StrnLenS (String, RSIZE_MAX + 1) <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//  }
 
   if (EndPointer != NULL) {
     *EndPointer = (CHAR16 *) String;
@@ -918,13 +927,14 @@ StrHexToUintnS (
     // defined by UINTN, then MAX_UINTN is stored in *Data and
     // RETURN_UNSUPPORTED is returned.
     //
-    if (*Data > ((MAX_UINTN - InternalHexCharToUintn (*String)) >> 4)) {
-      *Data = MAX_UINTN;
-      if (EndPointer != NULL) {
-        *EndPointer = (CHAR16 *) String;
-      }
-      return RETURN_UNSUPPORTED;
-    }
+//    if (*Data > ((MAX_UINTN - InternalHexCharToUintn (*String)) >> 4)) {
+//      *Data = MAX_UINTN;
+//      if (EndPointer != NULL) {
+//        *EndPointer = (CHAR16 *) String;
+//      }
+//      return RETURN_UNSUPPORTED;
+//    }
+//      ASSERT (*Data <= ((((UINTN) ~0) - InternalHexCharToUintn (*String)) >> 4));
 
     *Data = (*Data << 4) + InternalHexCharToUintn (*String);
     String++;
@@ -1008,9 +1018,9 @@ StrHexToUint64S (
   //
   // 2. The length of String shall not be greater than RSIZE_MAX.
   //
-  if (RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((StrnLenS (String, RSIZE_MAX + 1) <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
+//  if (RSIZE_MAX != 0) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((StrnLenS (String, RSIZE_MAX + 1) <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//  }
 
   if (EndPointer != NULL) {
     *EndPointer = (CHAR16 *) String;
@@ -1049,13 +1059,14 @@ StrHexToUint64S (
     // defined by UINT64, then MAX_UINT64 is stored in *Data and
     // RETURN_UNSUPPORTED is returned.
     //
-    if (*Data > RShiftU64 (MAX_UINT64 - InternalHexCharToUintn (*String), 4)) {
-      *Data = MAX_UINT64;
-      if (EndPointer != NULL) {
-        *EndPointer = (CHAR16 *) String;
-      }
-      return RETURN_UNSUPPORTED;
-    }
+//    if (*Data > RShiftU64 (MAX_UINT64 - InternalHexCharToUintn (*String), 4)) {
+//      *Data = MAX_UINT64;
+//      if (EndPointer != NULL) {
+//        *EndPointer = (CHAR16 *) String;
+//      }
+//      return RETURN_UNSUPPORTED;
+//    }
+//    ASSERT (*Data <= RShiftU64 (((UINT64) ~0) - InternalHexCharToUintn (*String) , 4));
 
     *Data = LShiftU64 (*Data, 4) + InternalHexCharToUintn (*String);
     String++;
@@ -1228,7 +1239,7 @@ StrToIpv6Address (
         //
         // Uintn won't exceed MAX_UINT16 if number of hexadecimal digit characters is no more than 4.
         //
-        ASSERT (AddressIndex + 1 < ARRAY_SIZE (Address->Addr));
+//      ASSERT (AddressIndex + 1 < ARRAY_SIZE (Address->Addr));
         LocalAddress.Addr[AddressIndex] = (UINT8) ((UINT16) Uintn >> 8);
         LocalAddress.Addr[AddressIndex + 1] = (UINT8) Uintn;
         AddressIndex += 2;
@@ -1709,7 +1720,7 @@ AsciiStrnLenS (
   //
   // If String is a null pointer or MaxSize is 0, then the AsciiStrnLenS function returns zero.
   //
-  if ((String == NULL) || (MaxSize == 0)) {
+  if (String == NULL) {
     return 0;
   }
 
@@ -1770,7 +1781,7 @@ AsciiStrnSizeS (
   // then AsciiStrnSizeS returns (sizeof (CHAR8) * (MaxSize + 1)) to keep a
   // consistent map with the AsciiStrnLenS function.
   //
-  return (AsciiStrnLenS (String, MaxSize) + 1) * sizeof (*String);
+  return (AsciiStrnLenS (String, MaxSize) + 1);
 }
 
 /**
@@ -1817,9 +1828,9 @@ AsciiStrCpyS (
   //
   // 2. DestMax shall not be greater than ASCII_RSIZE_MAX.
   //
-  if (ASCII_RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
+//  if (ASCII_RSIZE_MAX != 0) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//  }
 
   //
   // 3. DestMax shall not equal zero.
@@ -1830,18 +1841,18 @@ AsciiStrCpyS (
   // 4. DestMax shall be greater than AsciiStrnLenS(Source, DestMax).
   //
   SourceLen = AsciiStrnLenS (Source, DestMax);
-  SAFE_STRING_CONSTRAINT_CHECK ((DestMax > SourceLen), RETURN_BUFFER_TOO_SMALL);
+//  SAFE_STRING_CONSTRAINT_CHECK ((DestMax > SourceLen), RETURN_BUFFER_TOO_SMALL);
 
   //
   // 5. Copying shall not take place between objects that overlap.
   //
-  SAFE_STRING_CONSTRAINT_CHECK (InternalSafeStringNoAsciiStrOverlap (Destination, DestMax, (CHAR8 *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
+//  SAFE_STRING_CONSTRAINT_CHECK (InternalSafeStringNoAsciiStrOverlap (Destination, DestMax, (CHAR8 *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
 
   //
   // The AsciiStrCpyS function copies the string pointed to by Source (including the terminating
   // null character) into the array pointed to by Destination.
   //
-  while (*Source != 0) {
+  while ((*Source != 0) && (--DestMax > 0)) {
     *(Destination++) = *(Source++);
   }
   *Destination = 0;
@@ -1897,10 +1908,10 @@ AsciiStrnCpyS (
   //
   // 2. Neither DestMax nor Length shall be greater than ASCII_RSIZE_MAX
   //
-  if (ASCII_RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
-    SAFE_STRING_CONSTRAINT_CHECK ((Length <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
+//  if (ASCII_RSIZE_MAX != 0) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//    SAFE_STRING_CONSTRAINT_CHECK ((Length <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//  }
 
   //
   // 3. DestMax shall not equal zero.
@@ -1911,9 +1922,9 @@ AsciiStrnCpyS (
   // 4. If Length is not less than DestMax, then DestMax shall be greater than AsciiStrnLenS(Source, DestMax).
   //
   SourceLen = AsciiStrnLenS (Source, MIN (DestMax, Length));
-  if (Length >= DestMax) {
-    SAFE_STRING_CONSTRAINT_CHECK ((DestMax > SourceLen), RETURN_BUFFER_TOO_SMALL);
-  }
+//  if (Length >= DestMax) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((DestMax > SourceLen), RETURN_BUFFER_TOO_SMALL);
+//  }
 
   //
   // 5. Copying shall not take place between objects that overlap.
@@ -1921,7 +1932,7 @@ AsciiStrnCpyS (
   if (SourceLen > Length) {
     SourceLen = Length;
   }
-  SAFE_STRING_CONSTRAINT_CHECK (InternalSafeStringNoAsciiStrOverlap (Destination, DestMax, (CHAR8 *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
+//  SAFE_STRING_CONSTRAINT_CHECK (InternalSafeStringNoAsciiStrOverlap (Destination, DestMax, (CHAR8 *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
 
   //
   // The AsciiStrnCpyS function copies not more than Length successive characters (characters that
@@ -1929,7 +1940,7 @@ AsciiStrnCpyS (
   // pointed to by Destination. If no null character was copied from Source, then Destination[Length] is set to a null
   // character.
   //
-  while ((SourceLen > 0) && (*Source != 0)) {
+  while ((SourceLen > 0) && (*Source != 0) && (--DestMax > 0)) {
     *(Destination++) = *(Source++);
     SourceLen--;
   }
@@ -1993,9 +2004,9 @@ AsciiStrCatS (
   //
   // 2. DestMax shall not be greater than ASCII_RSIZE_MAX.
   //
-  if (ASCII_RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
+//  if (ASCII_RSIZE_MAX != 0) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//  }
 
   //
   // 3. DestMax shall not equal zero.
@@ -2011,12 +2022,12 @@ AsciiStrCatS (
   // 5. CopyLen shall be greater than AsciiStrnLenS(Source, CopyLen).
   //
   SourceLen = AsciiStrnLenS (Source, CopyLen);
-  SAFE_STRING_CONSTRAINT_CHECK ((CopyLen > SourceLen), RETURN_BUFFER_TOO_SMALL);
+//  SAFE_STRING_CONSTRAINT_CHECK ((CopyLen > SourceLen), RETURN_BUFFER_TOO_SMALL);
 
   //
   // 6. Copying shall not take place between objects that overlap.
   //
-  SAFE_STRING_CONSTRAINT_CHECK (InternalSafeStringNoAsciiStrOverlap (Destination, DestMax, (CHAR8 *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
+//  SAFE_STRING_CONSTRAINT_CHECK (InternalSafeStringNoAsciiStrOverlap (Destination, DestMax, (CHAR8 *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
 
   //
   // The AsciiStrCatS function appends a copy of the string pointed to by Source (including the
@@ -2024,7 +2035,7 @@ AsciiStrCatS (
   // from Source overwrites the null character at the end of Destination.
   //
   Destination = Destination + DestLen;
-  while (*Source != 0) {
+  while ((*Source != 0) && (--CopyLen > 0)) {
     *(Destination++) = *(Source++);
   }
   *Destination = 0;
@@ -2091,10 +2102,10 @@ AsciiStrnCatS (
   //
   // 2. Neither DestMax nor Length shall be greater than ASCII_RSIZE_MAX.
   //
-  if (ASCII_RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
-    SAFE_STRING_CONSTRAINT_CHECK ((Length <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
+//  if (ASCII_RSIZE_MAX != 0) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//    SAFE_STRING_CONSTRAINT_CHECK ((Length <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//  }
 
   //
   // 3. DestMax shall not equal zero.
@@ -2110,9 +2121,9 @@ AsciiStrnCatS (
   // 5. If Length is not less than CopyLen, then CopyLen shall be greater than AsciiStrnLenS(Source, CopyLen).
   //
   SourceLen = AsciiStrnLenS (Source, MIN (CopyLen, Length));
-  if (Length >= CopyLen) {
-    SAFE_STRING_CONSTRAINT_CHECK ((CopyLen > SourceLen), RETURN_BUFFER_TOO_SMALL);
-  }
+//  if (Length >= CopyLen) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((CopyLen > SourceLen), RETURN_BUFFER_TOO_SMALL);
+//  }
 
   //
   // 6. Copying shall not take place between objects that overlap.
@@ -2120,7 +2131,7 @@ AsciiStrnCatS (
   if (SourceLen > Length) {
     SourceLen = Length;
   }
-  SAFE_STRING_CONSTRAINT_CHECK (InternalSafeStringNoAsciiStrOverlap (Destination, DestMax, (CHAR8 *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
+//  SAFE_STRING_CONSTRAINT_CHECK (InternalSafeStringNoAsciiStrOverlap (Destination, DestMax, (CHAR8 *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
 
   //
   // The AsciiStrnCatS function appends not more than Length successive characters (characters
@@ -2130,7 +2141,7 @@ AsciiStrnCatS (
   // a null character.
   //
   Destination = Destination + DestLen;
-  while ((SourceLen > 0) && (*Source != 0)) {
+  while ((SourceLen > 0) && (*Source != 0) && (--CopyLen > 0)) {
     *(Destination++) = *(Source++);
     SourceLen--;
   }
@@ -2203,9 +2214,9 @@ AsciiStrDecimalToUintnS (
   //
   // 2. The length of String shall not be greater than ASCII_RSIZE_MAX.
   //
-  if (ASCII_RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((AsciiStrnLenS (String, ASCII_RSIZE_MAX + 1) <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
+//  if (ASCII_RSIZE_MAX != 0) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((AsciiStrnLenS (String, ASCII_RSIZE_MAX + 1) <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//  }
 
   if (EndPointer != NULL) {
     *EndPointer = (CHAR8 *) String;
@@ -2233,13 +2244,14 @@ AsciiStrDecimalToUintnS (
     // defined by UINTN, then MAX_UINTN is stored in *Data and
     // RETURN_UNSUPPORTED is returned.
     //
-    if (*Data > ((MAX_UINTN - (*String - '0')) / 10)) {
-      *Data = MAX_UINTN;
-      if (EndPointer != NULL) {
-        *EndPointer = (CHAR8 *) String;
-      }
-      return RETURN_UNSUPPORTED;
-    }
+//    if (*Data > ((MAX_UINTN - (*String - '0')) / 10)) {
+//      *Data = MAX_UINTN;
+//      if (EndPointer != NULL) {
+//        *EndPointer = (CHAR8 *) String;
+//      }
+//     return RETURN_UNSUPPORTED;
+//    }
+//    ASSERT (*Data <= ((((UINTN) ~0) - (*String - L'0')) / 10));
 
     *Data = *Data * 10 + (*String - '0');
     String++;
@@ -2315,9 +2327,9 @@ AsciiStrDecimalToUint64S (
   //
   // 2. The length of String shall not be greater than ASCII_RSIZE_MAX.
   //
-  if (ASCII_RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((AsciiStrnLenS (String, ASCII_RSIZE_MAX + 1) <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
+//  if (ASCII_RSIZE_MAX != 0) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((AsciiStrnLenS (String, ASCII_RSIZE_MAX + 1) <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
+ // }
 
   if (EndPointer != NULL) {
     *EndPointer = (CHAR8 *) String;
@@ -2345,13 +2357,14 @@ AsciiStrDecimalToUint64S (
     // defined by UINT64, then MAX_UINT64 is stored in *Data and
     // RETURN_UNSUPPORTED is returned.
     //
-    if (*Data > DivU64x32 (MAX_UINT64 - (*String - '0'), 10)) {
-      *Data = MAX_UINT64;
-      if (EndPointer != NULL) {
-        *EndPointer = (CHAR8 *) String;
-      }
-      return RETURN_UNSUPPORTED;
-    }
+//    if (*Data > DivU64x32 (MAX_UINT64 - (*String - '0'), 10)) {
+//     *Data = MAX_UINT64;
+//      if (EndPointer != NULL) {
+//        *EndPointer = (CHAR8 *) String;
+//      }
+//      return RETURN_UNSUPPORTED;
+//    }
+//    ASSERT (*Data <= DivU64x32 (((UINT64) ~0) - (*String - L'0') , 10));
 
     *Data = MultU64x32 (*Data, 10) + (*String - '0');
     String++;
@@ -2431,9 +2444,9 @@ AsciiStrHexToUintnS (
   //
   // 2. The length of String shall not be greater than ASCII_RSIZE_MAX.
   //
-  if (ASCII_RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((AsciiStrnLenS (String, ASCII_RSIZE_MAX + 1) <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
+//  if (ASCII_RSIZE_MAX != 0) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((AsciiStrnLenS (String, ASCII_RSIZE_MAX + 1) <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//  }
 
   if (EndPointer != NULL) {
     *EndPointer = (CHAR8 *) String;
@@ -2472,13 +2485,14 @@ AsciiStrHexToUintnS (
     // defined by UINTN, then MAX_UINTN is stored in *Data and
     // RETURN_UNSUPPORTED is returned.
     //
-    if (*Data > ((MAX_UINTN - InternalAsciiHexCharToUintn (*String)) >> 4)) {
-      *Data = MAX_UINTN;
-      if (EndPointer != NULL) {
-        *EndPointer = (CHAR8 *) String;
-      }
-      return RETURN_UNSUPPORTED;
-    }
+//    if (*Data > ((MAX_UINTN - InternalAsciiHexCharToUintn (*String)) >> 4)) {
+//      *Data = MAX_UINTN;
+//      if (EndPointer != NULL) {
+//        *EndPointer = (CHAR8 *) String;
+//      }
+//     return RETURN_UNSUPPORTED;
+//    }
+//    ASSERT (*Data <= ((((UINTN) ~0) - InternalHexCharToUintn (*String)) >> 4));
 
     *Data = (*Data << 4) + InternalAsciiHexCharToUintn (*String);
     String++;
@@ -2558,9 +2572,9 @@ AsciiStrHexToUint64S (
   //
   // 2. The length of String shall not be greater than ASCII_RSIZE_MAX.
   //
-  if (ASCII_RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((AsciiStrnLenS (String, ASCII_RSIZE_MAX + 1) <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
+//  if (ASCII_RSIZE_MAX != 0) {
+ //   SAFE_STRING_CONSTRAINT_CHECK ((AsciiStrnLenS (String, ASCII_RSIZE_MAX + 1) <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//  }
 
   if (EndPointer != NULL) {
     *EndPointer = (CHAR8 *) String;
@@ -2599,13 +2613,14 @@ AsciiStrHexToUint64S (
     // defined by UINT64, then MAX_UINT64 is stored in *Data and
     // RETURN_UNSUPPORTED is returned.
     //
-    if (*Data > RShiftU64 (MAX_UINT64 - InternalAsciiHexCharToUintn (*String), 4)) {
-      *Data = MAX_UINT64;
-      if (EndPointer != NULL) {
-        *EndPointer = (CHAR8 *) String;
-      }
-      return RETURN_UNSUPPORTED;
-    }
+//    if (*Data > RShiftU64 (MAX_UINT64 - InternalAsciiHexCharToUintn (*String), 4)) {
+//      *Data = MAX_UINT64;
+//      if (EndPointer != NULL) {
+//        *EndPointer = (CHAR8 *) String;
+//      }
+//      return RETURN_UNSUPPORTED;
+//    }
+//      ASSERT (*Data <= RShiftU64 (((UINT64) ~0) - InternalHexCharToUintn (*String) , 4));
 
     *Data = LShiftU64 (*Data, 4) + InternalAsciiHexCharToUintn (*String);
     String++;
@@ -2679,12 +2694,12 @@ UnicodeStrToAsciiStrS (
   //
   // 2. DestMax shall not be greater than ASCII_RSIZE_MAX or RSIZE_MAX.
   //
-  if (ASCII_RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
-  if (RSIZE_MAX != 0) {
-    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
-  }
+//  if (ASCII_RSIZE_MAX != 0) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//  }
+//  if (RSIZE_MAX != 0) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
+//  }
 
   //
   // 3. DestMax shall not equal zero.
@@ -2695,23 +2710,23 @@ UnicodeStrToAsciiStrS (
   // 4. DestMax shall be greater than StrnLenS (Source, DestMax).
   //
   SourceLen = StrnLenS (Source, DestMax);
-  SAFE_STRING_CONSTRAINT_CHECK ((DestMax > SourceLen), RETURN_BUFFER_TOO_SMALL);
+//  SAFE_STRING_CONSTRAINT_CHECK ((DestMax > SourceLen), RETURN_BUFFER_TOO_SMALL);
 
   //
   // 5. Copying shall not take place between objects that overlap.
   //
-  SAFE_STRING_CONSTRAINT_CHECK (!InternalSafeStringIsOverlap (Destination, DestMax, (VOID *)Source, (SourceLen + 1) * sizeof(CHAR16)), RETURN_ACCESS_DENIED);
+//  SAFE_STRING_CONSTRAINT_CHECK (!InternalSafeStringIsOverlap (Destination, DestMax, (VOID *)Source, (SourceLen + 1) * sizeof(CHAR16)), RETURN_ACCESS_DENIED);
 
   //
   // convert string
   //
-  while (*Source != '\0') {
+  while ((*Source != '\0') && (--DestMax > 0)) {
     //
     // If any Unicode characters in Source contain
     // non-zero value in the upper 8 bits, then ASSERT().
     //
-    ASSERT (*Source < 0x100);
-    *(Destination++) = (CHAR8) *(Source++);
+//    ASSERT (*Source < 0x100);
+    *(Destination++) = (CHAR8) (*(Source++) & 0xFF);
   }
   *Destination = '\0';
 
@@ -2790,7 +2805,7 @@ UnicodeStrnToAsciiStrS (
   // 2. Neither Length nor DestMax shall be greater than ASCII_RSIZE_MAX or
   // RSIZE_MAX.
   //
-  if (ASCII_RSIZE_MAX != 0) {
+/*  if (ASCII_RSIZE_MAX != 0) {
     SAFE_STRING_CONSTRAINT_CHECK ((Length <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
     SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
   }
@@ -2826,13 +2841,13 @@ UnicodeStrnToAsciiStrS (
   //
   // Convert string
   //
-  while ((*Source != 0) && (SourceLen > 0)) {
+  while ((*Source != 0) && (SourceLen > 0) && (--DestMax > 0)) {
     //
     // If any Unicode characters in Source contain non-zero value in the upper
     // 8 bits, then ASSERT().
     //
-    ASSERT (*Source < 0x100);
-    *(Destination++) = (CHAR8) *(Source++);
+//    ASSERT (*Source < 0x100);
+    *(Destination++) = (CHAR8) (*(Source++)  & 0xFF);
     SourceLen--;
     (*DestinationLength)++;
   }
@@ -2899,7 +2914,7 @@ AsciiStrToUnicodeStrS (
   //
   // 2. DestMax shall not be greater than RSIZE_MAX or ASCII_RSIZE_MAX.
   //
-  if (RSIZE_MAX != 0) {
+/*  if (RSIZE_MAX != 0) {
     SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
   }
   if (ASCII_RSIZE_MAX != 0) {
@@ -2915,20 +2930,20 @@ AsciiStrToUnicodeStrS (
   // 4. DestMax shall be greater than AsciiStrnLenS(Source, DestMax).
   //
   SourceLen = AsciiStrnLenS (Source, DestMax);
-  SAFE_STRING_CONSTRAINT_CHECK ((DestMax > SourceLen), RETURN_BUFFER_TOO_SMALL);
+//  SAFE_STRING_CONSTRAINT_CHECK ((DestMax > SourceLen), RETURN_BUFFER_TOO_SMALL);
 
   //
   // 5. Copying shall not take place between objects that overlap.
   //
-  SAFE_STRING_CONSTRAINT_CHECK (!InternalSafeStringIsOverlap (Destination, DestMax * sizeof(CHAR16), (VOID *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
+//  SAFE_STRING_CONSTRAINT_CHECK (!InternalSafeStringIsOverlap (Destination, DestMax * sizeof(CHAR16), (VOID *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
 
   //
   // Convert string
   //
-  while (*Source != '\0') {
+  while ((*Source != '\0') && (--DestMax > 0)) {
     *(Destination++) = (CHAR16)(UINT8)*(Source++);
   }
-  *Destination = '\0';
+  *Destination = L'\0';
 
   return RETURN_SUCCESS;
 }
@@ -3002,7 +3017,7 @@ AsciiStrnToUnicodeStrS (
   // 2. Neither Length nor DestMax shall be greater than ASCII_RSIZE_MAX or
   // RSIZE_MAX.
   //
-  if (RSIZE_MAX != 0) {
+/*  if (RSIZE_MAX != 0) {
     SAFE_STRING_CONSTRAINT_CHECK ((Length <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
     SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
   }
@@ -3021,9 +3036,9 @@ AsciiStrnToUnicodeStrS (
   // AsciiStrnLenS(Source, DestMax).
   //
   SourceLen = AsciiStrnLenS (Source, DestMax);
-  if (Length >= DestMax) {
-    SAFE_STRING_CONSTRAINT_CHECK ((DestMax > SourceLen), RETURN_BUFFER_TOO_SMALL);
-  }
+//  if (Length >= DestMax) {
+//    SAFE_STRING_CONSTRAINT_CHECK ((DestMax > SourceLen), RETURN_BUFFER_TOO_SMALL);
+//  }
 
   //
   // 5. Copying shall not take place between objects that overlap.
@@ -3031,14 +3046,14 @@ AsciiStrnToUnicodeStrS (
   if (SourceLen > Length) {
     SourceLen = Length;
   }
-  SAFE_STRING_CONSTRAINT_CHECK (!InternalSafeStringIsOverlap (Destination, DestMax * sizeof(CHAR16), (VOID *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
+//  SAFE_STRING_CONSTRAINT_CHECK (!InternalSafeStringIsOverlap (Destination, DestMax * sizeof(CHAR16), (VOID *)Source, SourceLen + 1), RETURN_ACCESS_DENIED);
 
   *DestinationLength = 0;
 
   //
   // Convert string
   //
-  while ((*Source != 0) && (SourceLen > 0)) {
+  while ((*Source != 0) && (SourceLen > 0)  && (--DestMax > 0)) {
     *(Destination++) = (CHAR16)(UINT8)*(Source++);
     SourceLen--;
     (*DestinationLength)++;
@@ -3201,7 +3216,7 @@ AsciiStrToIpv6Address (
         //
         // Uintn won't exceed MAX_UINT16 if number of hexadecimal digit characters is no more than 4.
         //
-        ASSERT (AddressIndex + 1 < ARRAY_SIZE (Address->Addr));
+//      ASSERT (AddressIndex + 1 < ARRAY_SIZE (Address->Addr));
         LocalAddress.Addr[AddressIndex] = (UINT8) ((UINT16) Uintn >> 8);
         LocalAddress.Addr[AddressIndex + 1] = (UINT8) Uintn;
         AddressIndex += 2;

@@ -43,6 +43,7 @@ StrCpy (
   )
 {
   CHAR16                            *ReturnValue;
+  INTN                              DestMax;
 
   //
   // Destination cannot be NULL
@@ -55,6 +56,8 @@ StrCpy (
   //
   ASSERT ((UINTN)(Destination - Source) > StrLen (Source));
   ASSERT ((UINTN)(Source - Destination) > StrLen (Source));
+
+  DestMax = StrLen (Destination);
 
   ReturnValue = Destination;
   while (*Source != 0) {
@@ -122,8 +125,11 @@ StrnCpy (
   ASSERT ((UINTN)(Destination - Source) > StrLen (Source));
   ASSERT ((UINTN)(Source - Destination) >= Length);
 
-  if (PcdGet32 (PcdMaximumUnicodeStringLength) != 0) {
-    ASSERT (Length <= PcdGet32 (PcdMaximumUnicodeStringLength));
+//  if (PcdGet32 (PcdMaximumUnicodeStringLength) != 0) {
+//    ASSERT (Length <= PcdGet32 (PcdMaximumUnicodeStringLength));
+//  }
+  if (Length > 1000000) {
+    return Destination;
   }
 
   ReturnValue = Destination;
@@ -163,16 +169,21 @@ StrLen (
 {
   UINTN                             Length;
 
-  ASSERT (String != NULL);
+//  ASSERT (String != NULL);
   ASSERT (((UINTN) String & BIT0) == 0);
+  if (!String) {
+    return 0;
+  }
 
   for (Length = 0; *String != L'\0'; String++, Length++) {
     //
     // If PcdMaximumUnicodeStringLength is not zero,
     // length should not more than PcdMaximumUnicodeStringLength
     //
-    if (PcdGet32 (PcdMaximumUnicodeStringLength) != 0) {
-      ASSERT (Length < PcdGet32 (PcdMaximumUnicodeStringLength));
+//    if (PcdGet32 (PcdMaximumUnicodeStringLength) != 0) {
+//      ASSERT (Length < PcdGet32 (PcdMaximumUnicodeStringLength));
+      if (Length >= 100000000ull) {
+        break;
     }
   }
   return Length;
@@ -202,6 +213,9 @@ StrSize (
   IN      CONST CHAR16              *String
   )
 {
+  if (!String) {
+    return 0;
+  }
   return (StrLen (String) + 1) * sizeof (*String);
 }
 
@@ -243,8 +257,19 @@ StrCmp (
   //
   // ASSERT both strings are less long than PcdMaximumUnicodeStringLength
   //
-  ASSERT (StrSize (FirstString) != 0);
-  ASSERT (StrSize (SecondString) != 0);
+//  ASSERT (StrSize (FirstString) != 0);
+//  ASSERT (StrSize (SecondString) != 0);
+  if ((StrSize (FirstString) == 0) && (StrSize (SecondString) == 0)) {
+    return 0;
+  }
+
+  if (StrSize (FirstString) == 0) {
+    return -1;
+  }
+  if (StrSize (SecondString) == 0) {
+    return 1;
+  }
+
 
   while ((*FirstString != L'\0') && (*FirstString == *SecondString)) {
     FirstString++;
@@ -304,8 +329,10 @@ StrnCmp (
   ASSERT (StrSize (FirstString) != 0);
   ASSERT (StrSize (SecondString) != 0);
 
-  if (PcdGet32 (PcdMaximumUnicodeStringLength) != 0) {
-    ASSERT (Length <= PcdGet32 (PcdMaximumUnicodeStringLength));
+//  if (PcdGet32 (PcdMaximumUnicodeStringLength) != 0) {
+//    ASSERT (Length <= PcdGet32 (PcdMaximumUnicodeStringLength));
+    if (Length > 100000000ull) {
+      Length = 100000000ull;
   }
 
   while ((*FirstString != L'\0') &&
@@ -476,8 +503,11 @@ StrStr (
   // ASSERT both strings are less long than PcdMaximumUnicodeStringLength.
   // Length tests are performed inside StrLen().
   //
-  ASSERT (StrSize (String) != 0);
-  ASSERT (StrSize (SearchString) != 0);
+//  ASSERT (StrSize (String) != 0);
+//  ASSERT (StrSize (SearchString) != 0);
+  if (!StrSize (String) || !StrSize (SearchString)) {
+    return NULL;
+  }
 
   if (*SearchString == L'\0') {
     return (CHAR16 *) String;
@@ -526,7 +556,7 @@ InternalIsDecimalDigitCharacter (
   IN      CHAR16                    Char
   )
 {
-  return (BOOLEAN) (Char >= L'0' && Char <= L'9');
+  return (BOOLEAN) ((Char >= L'0') && (Char <= L'9'));
 }
 
 /**
@@ -550,7 +580,7 @@ CharToUpper (
   IN      CHAR16                    Char
   )
 {
-  if (Char >= L'a' && Char <= L'z') {
+  if ((Char >= L'a') && (Char <= L'z')) {
     return (CHAR16) (Char - (L'a' - L'A'));
   }
 
@@ -605,8 +635,8 @@ InternalIsHexaDecimalDigitCharacter (
 {
 
   return (BOOLEAN) (InternalIsDecimalDigitCharacter (Char) ||
-    (Char >= L'A' && Char <= L'F') ||
-    (Char >= L'a' && Char <= L'f'));
+    ((Char >= L'A') && (Char <= L'F')) ||
+    ((Char >= L'a') && (Char <= L'f')));
 }
 
 /**
@@ -649,9 +679,13 @@ StrDecimalToUintn (
   IN      CONST CHAR16              *String
   )
 {
-  UINTN     Result;
+  UINTN     Result = 0;
+  RETURN_STATUS Status;
 
-  StrDecimalToUintnS (String, (CHAR16 **) NULL, &Result);
+  Status = StrDecimalToUintnS (String, (CHAR16 **) NULL, &Result);
+  if (Status != RETURN_SUCCESS) {
+    return 0;
+  }
   return Result;
 }
 
@@ -696,9 +730,13 @@ StrDecimalToUint64 (
   IN      CONST CHAR16              *String
   )
 {
-  UINT64     Result;
+  UINT64     Result = 0;
+  RETURN_STATUS Status;
 
-  StrDecimalToUint64S (String, (CHAR16 **) NULL, &Result);
+  Status = StrDecimalToUint64S (String, (CHAR16 **) NULL, &Result);
+  if (Status != RETURN_SUCCESS) {
+    return 0;
+  }
   return Result;
 }
 
@@ -743,9 +781,13 @@ StrHexToUintn (
   IN      CONST CHAR16              *String
   )
 {
-  UINTN     Result;
+  UINTN     Result = 0;
+  RETURN_STATUS Status;
 
-  StrHexToUintnS (String, (CHAR16 **) NULL, &Result);
+  Status = StrHexToUintnS (String, (CHAR16 **) NULL, &Result);
+  if (Status != RETURN_SUCCESS) {
+    return 0;
+  }
   return Result;
 }
 
@@ -785,6 +827,23 @@ StrHexToUintn (
   @retval Value translated from String.
 
 **/
+#if 1
+UINT64
+EFIAPI
+StrHexToUint64 (
+  IN      CONST CHAR16             *String
+  )
+{
+  UINT64    Result = 0;
+  RETURN_STATUS Status;
+
+  Status = StrHexToUint64S (String, (CHAR16 **) NULL, &Result);
+  if (Status != RETURN_SUCCESS) {
+    return 0;
+  }
+  return Result;
+}
+#else
 UINT64
 EFIAPI
 StrHexToUint64 (
@@ -793,9 +852,57 @@ StrHexToUint64 (
 {
   UINT64    Result;
 
-  StrHexToUint64S (String, (CHAR16 **) NULL, &Result);
+  //
+  // ASSERT String is less long than PcdMaximumUnicodeStringLength.
+  // Length tests are performed inside StrLen().
+  //
+//  ASSERT (StrSize (String) != 0);
+  if (!String) {
+    return 0;
+  }
+
+  //
+  // Ignore the pad spaces (space or tab)
+  //
+  while ((*String == L' ') || (*String == L'\t')) {
+    String++;
+  }
+
+  //
+  // Ignore leading Zeros after the spaces
+  //
+  while (*String == L'0') {
+    String++;
+  }
+
+  if (InternalCharToUpper (*String) == L'X') {
+//    ASSERT (*(String - 1) == L'0');
+    if (*(String - 1) != L'0') {
+      return 0;
+    }
+    //
+    // Skip the 'X'
+    //
+    String++;
+  }
+
+  Result = 0;
+
+  while (InternalIsHexaDecimalDigitCharacter (*String)) {
+    //
+    // If the Hex Number represented by String overflows according
+    // to the range defined by UINTN, then ASSERT().
+    //
+ //   ASSERT (Result <= RShiftU64 (((UINT64) ~0) - InternalHexCharToUintn (*String) , 4));
+
+    Result = LShiftU64 (Result, 4);
+    Result = Result + InternalHexCharToUintn (*String);
+    String++;
+  }
+
   return Result;
 }
+#endif
 
 /**
   Check if a ASCII character is a decimal character.
@@ -816,7 +923,7 @@ InternalAsciiIsDecimalDigitCharacter (
   IN      CHAR8                     Char
   )
 {
-  return (BOOLEAN) (Char >= '0' && Char <= '9');
+  return (BOOLEAN) ((Char >= '0') && (Char <= '9'));
 }
 
 /**
@@ -841,8 +948,8 @@ InternalAsciiIsHexaDecimalDigitCharacter (
 {
 
   return (BOOLEAN) (InternalAsciiIsDecimalDigitCharacter (Char) ||
-    (Char >= 'A' && Char <= 'F') ||
-    (Char >= 'a' && Char <= 'f'));
+    ((Char >= 'A') && (Char <= 'F')) ||
+    ((Char >= 'a') && (Char <= 'f')));
 }
 
 #ifndef DISABLE_NEW_DEPRECATED_INTERFACES
@@ -897,7 +1004,10 @@ UnicodeStrToAsciiStr (
   // ASSERT if Source is long than PcdMaximumUnicodeStringLength.
   // Length tests are performed inside StrLen().
   //
-  ASSERT (StrSize (Source) != 0);
+ // ASSERT (StrSize (Source) != 0);
+  if (!StrSize (Source)) {
+    return NULL;
+  }
 
   //
   // Source and Destination should not overlap
@@ -912,8 +1022,8 @@ UnicodeStrToAsciiStr (
     // If any Unicode characters in Source contain
     // non-zero value in the upper 8 bits, then ASSERT().
     //
-    ASSERT (*Source < 0x100);
-    *(Destination++) = (CHAR8) *(Source++);
+    //ASSERT (*Source < 0x100);
+    *(Destination++) = (CHAR8) (*(Source++) & 0xFF);
   }
 
   *Destination = '\0';
@@ -962,7 +1072,10 @@ AsciiStrCpy (
   //
   // Destination cannot be NULL
   //
-  ASSERT (Destination != NULL);
+  //ASSERT (Destination != NULL);
+  if (!Destination || !Source) {
+    return NULL;
+  }
 
   //
   // Destination and source cannot overlap
@@ -1024,7 +1137,11 @@ AsciiStrnCpy (
   //
   // Destination cannot be NULL
   //
-  ASSERT (Destination != NULL);
+  //ASSERT (Destination != NULL);
+  if (!Destination || !Source) {
+    return NULL;
+  }
+
 
   //
   // Destination and source cannot overlap
@@ -1032,8 +1149,10 @@ AsciiStrnCpy (
   ASSERT ((UINTN)(Destination - Source) > AsciiStrLen (Source));
   ASSERT ((UINTN)(Source - Destination) >= Length);
 
-  if (PcdGet32 (PcdMaximumAsciiStringLength) != 0) {
-    ASSERT (Length <= PcdGet32 (PcdMaximumAsciiStringLength));
+//  if (PcdGet32 (PcdMaximumAsciiStringLength) != 0) {
+//    ASSERT (Length <= PcdGet32 (PcdMaximumAsciiStringLength));
+    if (Length <= 100000000ull) {
+      Length = 100000000ull;
   }
 
   ReturnValue = Destination;
@@ -1073,16 +1192,22 @@ AsciiStrLen (
 {
   UINTN                             Length;
 
-  ASSERT (String != NULL);
+//  ASSERT (String != NULL);
+  if (!String) {
+    return 0;
+  }
 
   for (Length = 0; *String != '\0'; String++, Length++) {
     //
     // If PcdMaximumUnicodeStringLength is not zero,
     // length should not more than PcdMaximumUnicodeStringLength
     //
-    if (PcdGet32 (PcdMaximumAsciiStringLength) != 0) {
-      ASSERT (Length < PcdGet32 (PcdMaximumAsciiStringLength));
+ //   if (PcdGet32 (PcdMaximumAsciiStringLength) != 0) {
+ //     ASSERT (Length < PcdGet32 (PcdMaximumAsciiStringLength));
+      if (Length == 100000000ull) {
+        break;
     }
+ //   }
   }
   return Length;
 }
@@ -1110,6 +1235,10 @@ AsciiStrSize (
   IN      CONST CHAR8               *String
   )
 {
+  if (!String) {
+    return 0;
+  }
+
   return (AsciiStrLen (String) + 1) * sizeof (*String);
 }
 
@@ -1149,8 +1278,17 @@ AsciiStrCmp (
   //
   // ASSERT both strings are less long than PcdMaximumAsciiStringLength
   //
-  ASSERT (AsciiStrSize (FirstString));
-  ASSERT (AsciiStrSize (SecondString));
+//  ASSERT (AsciiStrSize (FirstString));
+//  ASSERT (AsciiStrSize (SecondString));
+  if (!AsciiStrSize (FirstString) && !AsciiStrSize (SecondString)) {
+    return 0;
+  }
+  if (!AsciiStrSize (FirstString)) {
+    return -1;
+  }
+  if (!AsciiStrSize (SecondString)) {
+    return 1;
+  }
 
   while ((*FirstString != '\0') && (*FirstString == *SecondString)) {
     FirstString++;
@@ -1179,7 +1317,7 @@ AsciiCharToUpper (
   IN      CHAR8                     Chr
   )
 {
-  return (UINT8) ((Chr >= 'a' && Chr <= 'z') ? Chr - ('a' - 'A') : Chr);
+  return (UINT8) (((Chr >= 'a') && (Chr <= 'z')) ? Chr - ('a' - 'A') : Chr);
 }
 
 /**
@@ -1251,8 +1389,17 @@ AsciiStriCmp (
   //
   // ASSERT both strings are less long than PcdMaximumAsciiStringLength
   //
-  ASSERT (AsciiStrSize (FirstString));
-  ASSERT (AsciiStrSize (SecondString));
+ // ASSERT (AsciiStrSize (FirstString));
+ // ASSERT (AsciiStrSize (SecondString));
+  if (!AsciiStrSize (FirstString) && !AsciiStrSize (SecondString)) {
+    return 0;
+  }
+  if (!AsciiStrSize (FirstString)) {
+    return -1;
+  }
+  if (!AsciiStrSize (SecondString)) {
+    return 1;
+  }
 
   UpperFirstString  = AsciiCharToUpper (*FirstString);
   UpperSecondString = AsciiCharToUpper (*SecondString);
@@ -1311,11 +1458,22 @@ AsciiStrnCmp (
   //
   // ASSERT both strings are less long than PcdMaximumAsciiStringLength
   //
-  ASSERT (AsciiStrSize (FirstString));
-  ASSERT (AsciiStrSize (SecondString));
+//  ASSERT (AsciiStrSize (FirstString));
+//  ASSERT (AsciiStrSize (SecondString));
+  if (!AsciiStrSize (FirstString) && !AsciiStrSize (SecondString)) {
+    return 0;
+  }
+  if (!AsciiStrSize (FirstString)) {
+    return -1;
+  }
+  if (!AsciiStrSize (SecondString)) {
+    return 1;
+  }
 
-  if (PcdGet32 (PcdMaximumAsciiStringLength) != 0) {
-    ASSERT (Length <= PcdGet32 (PcdMaximumAsciiStringLength));
+//  if (PcdGet32 (PcdMaximumAsciiStringLength) != 0) {
+//    ASSERT (Length <= PcdGet32 (PcdMaximumAsciiStringLength));
+    if (Length > 100000000ull) {
+      Length = 100000000ull;
   }
 
   while ((*FirstString != '\0') &&
@@ -1475,8 +1633,11 @@ AsciiStrStr (
   //
   // ASSERT both strings are less long than PcdMaximumAsciiStringLength
   //
-  ASSERT (AsciiStrSize (String) != 0);
-  ASSERT (AsciiStrSize (SearchString) != 0);
+//  ASSERT (AsciiStrSize (String) != 0);
+//  ASSERT (AsciiStrSize (SearchString) != 0);
+  if (!String || !SearchString) {
+    return NULL;
+  }
 
   if (*SearchString == '\0') {
     return (CHAR8 *) String;
@@ -1542,9 +1703,13 @@ AsciiStrDecimalToUintn (
   IN      CONST CHAR8               *String
   )
 {
-  UINTN     Result;
+  UINTN     Result = 0;
+  RETURN_STATUS Status;
 
-  AsciiStrDecimalToUintnS (String, (CHAR8 **) NULL, &Result);
+  Status = AsciiStrDecimalToUintnS (String, (CHAR8 **) NULL, &Result);
+  if (Status != RETURN_SUCCESS) {
+    return 0;
+  }
   return Result;
 }
 
@@ -1585,9 +1750,13 @@ AsciiStrDecimalToUint64 (
   IN      CONST CHAR8               *String
   )
 {
-  UINT64     Result;
+  UINT64     Result = 0;
+  RETURN_STATUS Status;
 
-  AsciiStrDecimalToUint64S (String, (CHAR8 **) NULL, &Result);
+  Status = AsciiStrDecimalToUint64S (String, (CHAR8 **) NULL, &Result);
+  if (Status != RETURN_SUCCESS) {
+    return 0;
+  }
   return Result;
 }
 
@@ -1631,9 +1800,14 @@ AsciiStrHexToUintn (
   IN      CONST CHAR8               *String
   )
 {
-  UINTN     Result;
+  UINTN     Result = 0;
+  RETURN_STATUS Status;
 
-  AsciiStrHexToUintnS (String, (CHAR8 **) NULL, &Result);
+
+  Status = AsciiStrHexToUintnS (String, (CHAR8 **) NULL, &Result);
+  if (Status != RETURN_SUCCESS) {
+    return 0;
+  }
   return Result;
 }
 
@@ -1678,9 +1852,13 @@ AsciiStrHexToUint64 (
   IN      CONST CHAR8                *String
   )
 {
-  UINT64    Result;
+  UINT64    Result = 0;
+  RETURN_STATUS Status;
 
-  AsciiStrHexToUint64S (String, (CHAR8 **) NULL, &Result);
+  Status = AsciiStrHexToUint64S (String, (CHAR8 **) NULL, &Result);
+  if (Status != RETURN_SUCCESS) {
+    return 0;
+  }
   return Result;
 }
 
@@ -1724,12 +1902,18 @@ AsciiStrToUnicodeStr (
 {
   CHAR16                            *ReturnValue;
 
-  ASSERT (Destination != NULL);
+//  ASSERT (Destination != NULL);
+  if (!Destination) {
+    return NULL;
+  }
 
   //
   // ASSERT Source is less long than PcdMaximumAsciiStringLength
   //
-  ASSERT (AsciiStrSize (Source) != 0);
+//  ASSERT (AsciiStrSize (Source) != 0);
+  if (!AsciiStrSize (Source)) {
+    return NULL;
+  }
 
   //
   // Source and Destination should not overlap
@@ -1964,6 +2148,7 @@ Base64Encode (
   @retval RETURN_INVALID_PARAMETER  Invalid CHAR8 element encountered in
                                     Source.
 **/
+#if 0
 RETURN_STATUS
 EFIAPI
 Base64Decode (
@@ -2220,6 +2405,7 @@ Base64Decode (
   }
   return RETURN_BUFFER_TOO_SMALL;
 }
+#endif
 
 /**
   Converts an 8-bit value to an 8-bit BCD value.

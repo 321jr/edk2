@@ -176,7 +176,7 @@ UsbHcAllocMemFromBlock (
     // available, otherwise we need to restart our searching.
     // Available counts the consective number of zero bit.
     //
-    if (!USB_HC_BIT_IS_SET (Block->Bits[Byte], Bit)) {
+    if (!USB_HC_BIT_IS_SET (Block->Bits[Byte], (UINTN)Bit)) {
       Available++;
 
       if (Available >= Units) {
@@ -468,7 +468,7 @@ UsbHcAllocateMem (
   NewBlock = UsbHcAllocMemBlock (Pool, Pages);
 
   if (NewBlock == NULL) {
-    DEBUG ((EFI_D_INFO, "UsbHcAllocateMem: failed to allocate block\n"));
+ //   DEBUG ((EFI_D_INFO, "UsbHcAllocateMem: failed to allocate block\n"));
     return NULL;
   }
 

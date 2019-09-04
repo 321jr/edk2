@@ -9,6 +9,9 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #ifndef __BOOT_MAINTENANCE_MANAGER_UI_LIB_H__
 #define __BOOT_MAINTENANCE_MANAGER_UI_LIB_H__
 
+//## Include/Guid/HiiBootMaintenanceFormset.h
+extern EFI_GUID gEfiIfrBootMaintenanceGuid; //  = { 0xb2dedc91, 0xd59f, 0x48d2, { 0x89, 0x8a, 0x12, 0x49, 0xc, 0x74, 0xa4, 0xe0 }};
+
 /**
   Create Time Out Menu in the page.
 

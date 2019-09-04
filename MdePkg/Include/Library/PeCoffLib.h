@@ -191,6 +191,8 @@ typedef struct {
   /// Private storage for implementation specific data.
   ///
   UINT64                            Context;
+  UINT32                            FatOffset;
+  BOOLEAN                           IsFat;
 } PE_COFF_LOADER_IMAGE_CONTEXT;
 
 /**

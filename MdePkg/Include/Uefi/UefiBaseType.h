@@ -4,7 +4,13 @@
 Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 Portions copyright (c) 2011 - 2016, ARM Ltd. All rights reserved.<BR>
 
-SPDX-License-Identifier: BSD-2-Clause-Patent
+This program and the accompanying materials are licensed and made available under
+the terms and conditions of the BSD License that accompanies this distribution.
+The full text of the license may be found at
+http://opensource.org/licenses/bsd-license.php.
+
+THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 **/
 
@@ -208,7 +214,7 @@ typedef union {
            by Pages.
 
 **/
-#define EFI_PAGES_TO_SIZE(Pages)  ((Pages) << EFI_PAGE_SHIFT)
+#define EFI_PAGES_TO_SIZE(Pages)  (((UINTN)Pages) << EFI_PAGE_SHIFT)
 
 ///
 /// PE32+ Machine type for IA32 UEFI images.

@@ -5,7 +5,13 @@
   pointers are not NULL before use.
 
   Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
-  SPDX-License-Identifier: BSD-2-Clause-Patent
+  This program and the accompanying materials
+  are licensed and made available under the terms and conditions of the BSD License
+  which accompanies this distribution.  The full text of the license may be found at
+  http://opensource.org/licenses/bsd-license.php
+
+  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 **/
 
@@ -73,25 +79,25 @@ UefiHiiServicesLibConstructor (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS Status;
+//  EFI_STATUS Status;
 
   //
   // Retrieve the pointer to the UEFI HII String Protocol
   //
-  Status = gBS->LocateProtocol (&gEfiHiiStringProtocolGuid, NULL, (VOID **) &gHiiString);
-  ASSERT_EFI_ERROR (Status);
+ /* Status = */gBS->LocateProtocol (&gEfiHiiStringProtocolGuid, NULL, (VOID **) &gHiiString);
+//  ASSERT_EFI_ERROR (Status);
 
   //
   // Retrieve the pointer to the UEFI HII Database Protocol
   //
-  Status = gBS->LocateProtocol (&gEfiHiiDatabaseProtocolGuid, NULL, (VOID **) &gHiiDatabase);
-  ASSERT_EFI_ERROR (Status);
+ /* Status = */gBS->LocateProtocol (&gEfiHiiDatabaseProtocolGuid, NULL, (VOID **) &gHiiDatabase);
+//  ASSERT_EFI_ERROR (Status);
 
   //
   // Retrieve the pointer to the UEFI HII Config Routing Protocol
   //
-  Status = gBS->LocateProtocol (&gEfiHiiConfigRoutingProtocolGuid, NULL, (VOID **) &gHiiConfigRouting);
-  ASSERT_EFI_ERROR (Status);
+/*  Status = */gBS->LocateProtocol (&gEfiHiiConfigRoutingProtocolGuid, NULL, (VOID **) &gHiiConfigRouting);
+//  ASSERT_EFI_ERROR (Status);
 
   //
   // Retrieve the pointer to the optional UEFI HII Font Protocol
