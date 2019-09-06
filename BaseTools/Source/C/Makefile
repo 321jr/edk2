@@ -12,11 +12,13 @@ LIBRARIES = Common
 APPLICATIONS = \
   VfrCompile \
   BrotliCompress \
+  EfiLdrImage \
   EfiRom \
   GenCrc32 \
   GenFfs \
   GenFv \
   GenFw \
+  GenPage \
   GenSec \
   LzmaCompress \
   Split \

@@ -184,7 +184,8 @@ StrLen (
 //      ASSERT (Length < PcdGet32 (PcdMaximumUnicodeStringLength));
       if (Length >= 100000000ull) {
         break;
-    }
+      }
+//    }
   }
   return Length;
 }
@@ -333,7 +334,8 @@ StrnCmp (
 //    ASSERT (Length <= PcdGet32 (PcdMaximumUnicodeStringLength));
     if (Length > 100000000ull) {
       Length = 100000000ull;
-  }
+    }
+//  }
 
   while ((*FirstString != L'\0') &&
          (*SecondString != L'\0') &&
@@ -847,8 +849,8 @@ StrHexToUint64 (
 UINT64
 EFIAPI
 StrHexToUint64 (
-  IN      CONST CHAR16             *String
-  )
+                IN      CONST CHAR16             *String
+                )
 {
   UINT64    Result;
 
@@ -1153,7 +1155,8 @@ AsciiStrnCpy (
 //    ASSERT (Length <= PcdGet32 (PcdMaximumAsciiStringLength));
     if (Length <= 100000000ull) {
       Length = 100000000ull;
-  }
+    }
+//  }
 
   ReturnValue = Destination;
 
@@ -1206,7 +1209,7 @@ AsciiStrLen (
  //     ASSERT (Length < PcdGet32 (PcdMaximumAsciiStringLength));
       if (Length == 100000000ull) {
         break;
-    }
+      }
  //   }
   }
   return Length;
@@ -1474,7 +1477,8 @@ AsciiStrnCmp (
 //    ASSERT (Length <= PcdGet32 (PcdMaximumAsciiStringLength));
     if (Length > 100000000ull) {
       Length = 100000000ull;
-  }
+    }
+//  }
 
   while ((*FirstString != '\0') &&
          (*SecondString != '\0') &&

@@ -106,11 +106,16 @@ InternalSafeStringNoAsciiStrOverlap (
   @param  String   A pointer to a Null-terminated Unicode string.
   @param  MaxSize  The maximum number of Destination Unicode
                    char, including terminating null char.
+Slice: NOT including
 
   @retval 0        If String is NULL.
   @retval MaxSize  If there is no null character in the first MaxSize characters of String.
   @return The number of characters that percede the terminating null character.
-
+Slice:
+ for example string = L"012345"
+  StrnLenS(string, 4) = 4;
+  StrnLenS(string, 6) = 6;
+  StrnLenS(string, 9) = 6;
 **/
 UINTN
 EFIAPI
@@ -124,7 +129,7 @@ StrnLenS (
   ASSERT (((UINTN) String & BIT0) == 0);
 
   //
-  // If String is a null pointer or MaxSize is 0, then the StrnLenS function returns zero.
+  // If String is a null pointer, then the StrnLenS function returns zero.
   //
   if (String == NULL) {
     return 0;
@@ -1718,7 +1723,7 @@ AsciiStrnLenS (
   UINTN                             Length;
 
   //
-  // If String is a null pointer or MaxSize is 0, then the AsciiStrnLenS function returns zero.
+  // If String is a null pointer, then the AsciiStrnLenS function returns zero.
   //
   if (String == NULL) {
     return 0;
@@ -2813,7 +2818,7 @@ UnicodeStrnToAsciiStrS (
     SAFE_STRING_CONSTRAINT_CHECK ((Length <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
     SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= RSIZE_MAX), RETURN_INVALID_PARAMETER);
   }
-
+*/
   //
   // 3. DestMax shall not equal zero.
   //
@@ -2920,7 +2925,7 @@ AsciiStrToUnicodeStrS (
   if (ASCII_RSIZE_MAX != 0) {
     SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
   }
-
+*/
   //
   // 3. DestMax shall not equal zero.
   //
@@ -3025,7 +3030,7 @@ AsciiStrnToUnicodeStrS (
     SAFE_STRING_CONSTRAINT_CHECK ((Length <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
     SAFE_STRING_CONSTRAINT_CHECK ((DestMax <= ASCII_RSIZE_MAX), RETURN_INVALID_PARAMETER);
   }
-
+*/
   //
   // 3. DestMax shall not equal zero.
   //
